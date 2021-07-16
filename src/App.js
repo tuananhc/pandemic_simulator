@@ -13,11 +13,7 @@ export default function RangeSlider() {
   const [contagiousRadius, setContagiousRadius] = useState(0)
   const [susceptibleRate, setSusceptibleRate] = useState(20)
   const [populationList, setPopulationList] = useState([])
-  const [shuffleDisabled, setShuffleDisabled] = useState(false)
-  const [groupDisabled, setGroupDisabled] = useState(false)
   const [startDisabled, setStartDisabled] = useState(false)
-  const [resetDisabled, setResetDisabled] = useState(true)
-  const [pauseDisabled, setPauseDisabled] = useState(true)
   const [activeCases, setActiveCases] = useState(0)
   const [rFactor, setRFactor] = useState(0)
   const [status, setStatus] = useState([])
@@ -66,8 +62,14 @@ export default function RangeSlider() {
   }, [status])
 
   useEffect(() => {
+    var stop = status.every(e => e == false);
+    if (stop) {
+      anime.remove('.population')
+      setStartDisabled(false)
+    }
     const interval = setInterval(() => {
-      if (startDisabled) {
+      if (startDisabled && !stop) {
+        var stats = [...status]
         var coor = []
         for (var i = 0; i < population; i++) {
           var element = document.getElementById(i)
@@ -87,11 +89,9 @@ export default function RangeSlider() {
                       targets: el,
                       background: '#FF0000',
                       duration: 1000,
-                      easing: 'easeInOutQuad',
+                      easing: 'linear',
                     });
-                    var stat = [...status]
-                    stat[j] = false
-                    setStatus(stat)
+                    stats[j] = false
                   } else {
                     var el = document.getElementById('healthy'.concat(i))
                     document.getElementById('ring'.concat(i)).classList.add('ring')
@@ -99,16 +99,15 @@ export default function RangeSlider() {
                       targets: el,
                       background: '#FF0000',
                       duration: 1000,
-                      easing: 'easeInOutQuad',
+                      easing: 'linear',
                     })
-                    var stat = [...status]
-                    stat[i] = false
-                    setStatus(stat)
+                    stats[i] = false
                   }
                 }
               }
             }
           }
+          setStatus(stats)
         }
       }
     }, 500)
@@ -171,7 +170,7 @@ export default function RangeSlider() {
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
             <text style={{ fontSize: 20 }}># Active cases: {activeCases}</text>
           </div>
-          <div class='border' style={{ border: '3px solid black', width: 390, height: 390, flexWrap: 'wrap', flexDirection: 'row', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', padding: 80 }}>
+          <div class='border' style={{ border: '3px solid black', width: 390, height: 390, flexWrap: 'wrap', flexDirection: 'row', display: 'flex', justifyContent: 'flex-start', alignItems: 'start', padding: 80 }}>
             {populationList.map((id) => {
               if (id < Math.floor(population * infectedPercent / 100)) {
                 return (renderInfected(id))
@@ -180,6 +179,10 @@ export default function RangeSlider() {
               }
             })}
           </div>
+          <div>
+
+          </div>
+
           <text style={{ marginTop: 10, fontSize: 20 }}>R={rFactor}</text>
         </div>
 
@@ -314,7 +317,7 @@ export default function RangeSlider() {
                 color="primary"
                 style={{ width: 100 }}
                 onClick={() => shuffle()}
-                disabled={shuffleDisabled}
+                disabled={startDisabled}
               >
                 Shuffle
               </Button>
@@ -328,10 +331,6 @@ export default function RangeSlider() {
                 style={{ width: 100 }}
                 onClick={() => {
                   setStartDisabled(true)
-                  setShuffleDisabled(true)
-                  setGroupDisabled(true)
-                  setResetDisabled(false)
-                  setPauseDisabled(false)
                   start()
                 }}
                 disabled={startDisabled}
@@ -347,11 +346,8 @@ export default function RangeSlider() {
                 onClick={() => {
                   anime.remove('.population')
                   setStartDisabled(false)
-                  setShuffleDisabled(false)
-                  setGroupDisabled(false)
-                  setPauseDisabled(true)
                 }}
-                disabled={pauseDisabled}
+                disabled={!startDisabled}
               >
                 Pause
               </Button>
@@ -361,9 +357,8 @@ export default function RangeSlider() {
                 variant="contained"
                 color="primary"
                 style={{ width: 100 }}
-                disabled={startDisabled}
+                disabled={!startDisabled}
                 onClick={() => {
-
                 }}
               >
                 Reset
