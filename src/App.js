@@ -2,15 +2,16 @@ import Typography from '@material-ui/core/Typography';
 import Slider from '@material-ui/core/Slider';
 import Button from '@material-ui/core/Button'
 import Input from '@material-ui/core/Input'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import anime from 'animejs/lib/anime.es.js';
 import './App.css'
+import Ring from './circle.png'
 
 export default function RangeSlider() {
   const [population, setPopulation] = useState(50);
   const [infectedPercent, setInfectedPercent] = useState(0)
   const [contagiousRadius, setContagiousRadius] = useState(0)
-  const [susceptibleRate, setSusceptibleRate] = useState(0)
+  const [susceptibleRate, setSusceptibleRate] = useState(20)
   const [populationList, setPopulationList] = useState([])
   const [shuffleDisabled, setShuffleDisabled] = useState(false)
   const [groupDisabled, setGroupDisabled] = useState(false)
@@ -19,22 +20,100 @@ export default function RangeSlider() {
   const [pauseDisabled, setPauseDisabled] = useState(true)
   const [activeCases, setActiveCases] = useState(0)
   const [rFactor, setRFactor] = useState(0)
+  const [status, setStatus] = useState([])
 
-  function generate(population, infectedPercent) {
-    var pop = []
-    for (var i = 0; i < Math.floor(population * infectedPercent / 100); i++) {
-      pop.push(renderInfected())
-    }
-    for (var i = Math.floor(population * infectedPercent / 100); i < population; i++) {
-      pop.push(renderHealthy())
-    }
-    setPopulationList(pop);
+  function renderHealthy(id) {
+    return (
+      <div class='population' id={id} style={{ margin: 10, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+        <img id={'ring'.concat(id)} src={Ring} style={{ width: 9.5, height: 9.5, position: 'absolute' }} />
+        <div id={'healthy'.concat(id)} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#00FF00' }} />
+      </div>
+    )
+  }
+
+  function renderInfected(id) {
+    return (
+      <div class='population' id={id} style={{ margin: 10, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+        <img class='ring' src={Ring} style={{ width: 9.5, height: 9.5, position: 'absolute' }} />
+        <div class='infected' style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#FF0000' }} />
+      </div>
+    )
   }
 
   useEffect(() => {
-    generate(population, infectedPercent)
-    setActiveCases(Math.floor(population * infectedPercent / 100))
+    var pop = []
+    var stats = []
+    for (var i = 0; i < population; i++) {
+      pop.push(i)
+      if (i < Math.floor(population * infectedPercent / 100)) {
+        stats.push(false)
+      } else {
+        stats.push(true)
+      }
+    }
+    setStatus(stats)
+    setPopulationList(pop)
   }, [population, infectedPercent])
+
+  useEffect(() => {
+    var cases = 0
+    for (var i = 0; i < population; i++) {
+      if (!status[i]) {
+        cases++
+      }
+    }
+    setActiveCases(cases)
+  }, [status])
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (startDisabled) {
+        var coor = []
+        for (var i = 0; i < population; i++) {
+          var element = document.getElementById(i)
+          var rect = element.getBoundingClientRect();
+          coor.push([rect.top, rect.left])
+        }
+        if (coor.length > 0) {
+          for (var i = 0; i < population; i++) {
+            for (var j = 0; j < population && j != i; j++) {
+              if (status[i] != status[j]) {
+                var dist = Math.sqrt(Math.pow(coor[i][0] - coor[j][0], 2) + Math.pow(coor[i][1] - coor[j][1], 2))
+                if (dist < 35) {
+                  if (!status[i]) {
+                    var el = document.getElementById('healthy'.concat(j))
+                    document.getElementById('ring'.concat(j)).classList.add('ring')
+                    anime({
+                      targets: el,
+                      background: '#FF0000',
+                      duration: 1000,
+                      easing: 'easeInOutQuad',
+                    });
+                    var stat = [...status]
+                    stat[j] = false
+                    setStatus(stat)
+                  } else {
+                    var el = document.getElementById('healthy'.concat(i))
+                    document.getElementById('ring'.concat(i)).classList.add('ring')
+                    anime({
+                      targets: el,
+                      background: '#FF0000',
+                      duration: 1000,
+                      easing: 'easeInOutQuad',
+                    })
+                    var stat = [...status]
+                    stat[i] = false
+                    setStatus(stat)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }, 500)
+    return () => clearInterval(interval)
+  }, [startDisabled, status])
 
   function handleBlur() {
     if (population < 0) {
@@ -42,23 +121,6 @@ export default function RangeSlider() {
     } else if (population > 100) {
       setPopulation(100);
     }
-  }
-
-  function renderHealthy() {
-    return (
-      <div class='population-el' style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#4aa96c', margin: 10 }} />
-    )
-  }
-
-  function renderInfected() {
-    return (
-      <div class='population-el' style={{ margin: 10 }}>
-        <div class="outer">
-          <div class="inner" />
-        </div>
-        <div style={{ width: 10, height: 10, position: 'relative', borderRadius: '50%', backgroundColor: 'red' }} />
-      </div>
-    )
   }
 
   function shuffle() {
@@ -76,237 +138,242 @@ export default function RangeSlider() {
 
   function start() {
     anime({
-      targets: '.population-el',
+      targets: '.population',
       translateX: function () {
-        return anime.random(0, 75);
+        return anime.random(-75, 75);
       },
       translateY: function () {
-        return anime.random(0, 75);
+        return anime.random(-75, 75);
       },
-      easing: 'easeInOutQuad',
+      easing: 'linear',
       complete: start
     });
-
+    anime({
+      targets: '.ring',
+      scale: {
+        value: [1, 4],
+        duration: 5500
+      },
+      opacity: {
+        value: [1, 0],
+        duration: 1000,
+        easing: 'linear',
+        loop: true
+      },
+      loop: true
+    })
   }
 
   return (
-    <div style={{ display: 'flex', flex: 1, flexDirection: 'row', padding: 40 }}>
-      <div style={{ display: 'flex', flex: 0.4, flexDirection: 'column', }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-          <text style={{ fontSize: 20 }}># Active cases: {activeCases}</text>
+    <div>
+      <div style={{ display: 'flex', flex: 1, flexDirection: 'row', padding: 40 }}>
+        <div style={{ display: 'flex', flex: 0.4, flexDirection: 'column', }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
+            <text style={{ fontSize: 20 }}># Active cases: {activeCases}</text>
+          </div>
+          <div class='border' style={{ border: '3px solid black', width: 390, height: 390, flexWrap: 'wrap', flexDirection: 'row', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', padding: 80 }}>
+            {populationList.map((id) => {
+              if (id < Math.floor(population * infectedPercent / 100)) {
+                return (renderInfected(id))
+              } else {
+                return (renderHealthy(id))
+              }
+            })}
+          </div>
+          <text style={{ marginTop: 10, fontSize: 20 }}>R={rFactor}</text>
         </div>
-        <div style={{ border: '3px solid black', width: 390, height: 390, flexWrap: 'wrap', flexDirection: 'row', display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', padding: 10 }}>
-          {populationList}
-        </div>
-        <text style={{ marginTop: 10, fontSize: 20 }}>R={rFactor}</text>
-      </div>
 
-      <div style={{ display: 'flex', flex: 0.6, flexDirection: 'column', marginLeft: 50 }}>
-        <Typography id="range-slider" gutterBottom>
-          Population
-        </Typography>
-        <div style={{ display: 'flex', flexDirection: 'row' }}>
-          <div style={{ width: 400 }}>
-            <Slider
-              value={population}
-              onChange={(event, value) => setPopulation(value)}
-              valueLabelDisplay="auto"
-              aria-labelledby="range-slider"
-              min={0}
-              max={169}
-            />
+        <div style={{ display: 'flex', flex: 0.6, flexDirection: 'column', marginLeft: 50 }}>
+          <Typography id="range-slider" gutterBottom>
+            Population
+          </Typography>
+          <div style={{ display: 'flex', flexDirection: 'row' }}>
+            <div style={{ width: 400 }}>
+              <Slider
+                value={population}
+                onChange={(event, value) => setPopulation(value)}
+                valueLabelDisplay="auto"
+                aria-labelledby="range-slider"
+                min={0}
+                max={169}
+                disabled={startDisabled}
+              />
+            </div>
+            <div style={{ marginLeft: 10 }}>
+              <Input
+                value={population}
+                margin="dense"
+                onChange={(event) => (event.target.value) ? setPopulation(event.target.value) : () => { }}
+                onBlur={handleBlur}
+                inputProps={{
+                  step: 1,
+                  min: 0,
+                  max: 169,
+                  type: 'number',
+                  'aria-labelledby': 'input-slider',
+                }}
+              />
+            </div>
           </div>
-          <div style={{ marginLeft: 10 }}>
-            <Input
-              value={population}
-              margin="dense"
-              onChange={(event) => (event.target.value) ? setPopulation(event.target.value) : () => { }}
-              onBlur={handleBlur}
-              inputProps={{
-                step: 1,
-                min: 0,
-                max: 169,
-                type: 'number',
-                'aria-labelledby': 'input-slider',
-              }}
-            />
+          <Typography id="range-slider" gutterBottom>
+            Infected proportion (%)
+          </Typography>
+          <div style={{ display: 'flex', flexDirection: 'row' }}>
+            <div style={{ width: 400 }}>
+              <Slider
+                value={infectedPercent}
+                onChange={(event, value) => setInfectedPercent(value)}
+                valueLabelDisplay="auto"
+                aria-labelledby="range-slider"
+                min={0}
+                max={100}
+                disabled={startDisabled}
+              />
+            </div>
+            <div style={{ marginLeft: 10 }}>
+              <Input
+                value={infectedPercent}
+                margin="dense"
+                onChange={(event) => (event.target.value) ? setInfectedPercent(event.target.value) : () => { }}
+                inputProps={{
+                  step: 1,
+                  min: 0,
+                  max: 100,
+                  type: 'number',
+                  'aria-labelledby': 'input-slider',
+                }}
+              />
+            </div>
           </div>
-        </div>
-        <Typography id="range-slider" gutterBottom>
-          Infected proportion (%)
-        </Typography>
-        <div style={{ display: 'flex', flexDirection: 'row' }}>
-          <div style={{ width: 400 }}>
-            <Slider
-              value={infectedPercent}
-              onChange={(event, value) => setInfectedPercent(value)}
-              valueLabelDisplay="auto"
-              aria-labelledby="range-slider"
-              min={0}
-              max={100}
-            />
+          <Typography id="range-slider" gutterBottom>
+            Contagious Radius (meters)
+          </Typography>
+          <div style={{ display: 'flex', flexDirection: 'row' }}>
+            <div style={{ width: 400 }}>
+              <Slider
+                value={contagiousRadius}
+                onChange={(event, value) => setContagiousRadius(value)}
+                valueLabelDisplay="auto"
+                aria-labelledby="range-slider"
+                min={0}
+                step={0.2}
+                max={5}
+                disabled={startDisabled}
+              />
+            </div>
+            <div style={{ marginLeft: 10 }}>
+              <Input
+                value={contagiousRadius}
+                margin="dense"
+                onChange={(event) => (event.target.value) ? setContagiousRadius(event.target.value) : () => { }}
+                inputProps={{
+                  step: 0.1,
+                  min: 0,
+                  max: 5,
+                  type: 'number',
+                  'aria-labelledby': 'input-slider',
+                }}
+              />
+            </div>
           </div>
-          <div style={{ marginLeft: 10 }}>
-            <Input
-              value={infectedPercent}
-              margin="dense"
-              onChange={(event) => (event.target.value) ? setInfectedPercent(event.target.value) : () => { }}
-              inputProps={{
-                step: 1,
-                min: 0,
-                max: 100,
-                type: 'number',
-                'aria-labelledby': 'input-slider',
-              }}
-            />
+          <Typography id="range-slider" gutterBottom>
+            Susceptible Rate (%)
+          </Typography>
+          <div style={{ display: 'flex', flexDirection: 'row' }}>
+            <div style={{ width: 400 }}>
+              <Slider
+                value={susceptibleRate}
+                onChange={(event, value) => setSusceptibleRate(value)}
+                valueLabelDisplay="auto"
+                aria-labelledby="range-slider"
+                min={0}
+                max={100}
+                disabled={startDisabled}
+              />
+            </div>
+            <div style={{ marginLeft: 10 }}>
+              <Input
+                value={susceptibleRate}
+                margin="dense"
+                onChange={(event) => (event.target.value) ? setSusceptibleRate(event.target.value) : () => { }}
+                inputProps={{
+                  step: 1,
+                  min: 0,
+                  max: 100,
+                  type: 'number',
+                  'aria-labelledby': 'input-slider',
+                }}
+              />
+            </div>
           </div>
-        </div>
-        <Typography id="range-slider" gutterBottom>
-          Contagious Radius (meters)
-        </Typography>
-        <div style={{ display: 'flex', flexDirection: 'row' }}>
-          <div style={{ width: 400 }}>
-            <Slider
-              value={contagiousRadius}
-              onChange={(event, value) => setContagiousRadius(value)}
-              valueLabelDisplay="auto"
-              aria-labelledby="range-slider"
-              min={0}
-              step={0.2}
-              max={5}
-            />
+          Options:
+          <div style={{ display: 'flex', flexDirection: 'row', }}>
+            <div style={{ margin: 20 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                style={{ width: 100 }}
+                onClick={() => shuffle()}
+                disabled={shuffleDisabled}
+              >
+                Shuffle
+              </Button>
+            </div>
           </div>
-          <div style={{ marginLeft: 10 }}>
-            <Input
-              value={contagiousRadius}
-              margin="dense"
-              onChange={(event) => (event.target.value) ? setContagiousRadius(event.target.value) : () => { }}
-              inputProps={{
-                step: 0.1,
-                min: 0,
-                max: 5,
-                type: 'number',
-                'aria-labelledby': 'input-slider',
-              }}
-            />
-          </div>
-        </div>
-        <Typography id="range-slider" gutterBottom>
-          Susceptible Rate (%)
-        </Typography>
-        <div style={{ display: 'flex', flexDirection: 'row' }}>
-          <div style={{ width: 400 }}>
-            <Slider
-              value={susceptibleRate}
-              onChange={(event, value) => setSusceptibleRate(value)}
-              valueLabelDisplay="auto"
-              aria-labelledby="range-slider"
-              min={0}
-              max={100}
-            />
-          </div>
-          <div style={{ marginLeft: 10 }}>
-            <Input
-              value={susceptibleRate}
-              margin="dense"
-              onChange={(event) => (event.target.value) ? setSusceptibleRate(event.target.value) : () => { }}
-              inputProps={{
-                step: 1,
-                min: 0,
-                max: 100,
-                type: 'number',
-                'aria-labelledby': 'input-slider',
-              }}
-            />
-          </div>
-        </div>
-        Options:
-        <div style={{ display: 'flex', flexDirection: 'row', }}>
-          <div style={{ margin: 20 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              style={{ width: 100 }}
-              onClick={() => shuffle()}
-              disabled={shuffleDisabled}
-            >
-              Shuffle
-          </Button>
-          </div>
-          <div style={{ margin: 20 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              style={{ width: 100 }}
-              disabled={groupDisabled}
-              onClick={() => {
-                anime({
-                  targets: '.outer',
-                  scale: {
-                    value: 4,
-                    duration: 5000,
-                  },
-                  opacity: {
-                    value: [1, 0],
-                    duration: 4000
-                  },
-                  loop: true,
-                })
-              }}
-            >
-              Group
-          </Button>
-          </div>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'row', }}>
-          <div style={{ margin: 20 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              style={{ width: 100 }}
-              onClick={() => {
-                setStartDisabled(true)
-                setShuffleDisabled(true)
-                setGroupDisabled(true)
-                setResetDisabled(false)
-                setPauseDisabled(false)
-                start()
-              }}
-              disabled={startDisabled}
-            >
-              Start
-          </Button>
-          </div>
-          <div style={{ margin: 20 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              style={{ width: 100 }}
-              onClick={() => {
-                anime.remove('.population-el')
-                setStartDisabled(false)
-                setShuffleDisabled(false)
-                setGroupDisabled(false)
-                setPauseDisabled(true)
-              }}
-              disabled={pauseDisabled}
-            >
-              Pause
-          </Button>
-          </div>
-          <div style={{ margin: 20 }}>
-            <Button
-              variant="contained"
-              color="primary"
-              style={{ width: 100 }}
-              onClick={() => { }}
-              disabled={resetDisabled}
-            >
-              Reset
-          </Button>
+          <div style={{ display: 'flex', flexDirection: 'row', }}>
+            <div style={{ margin: 20 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                style={{ width: 100 }}
+                onClick={() => {
+                  setStartDisabled(true)
+                  setShuffleDisabled(true)
+                  setGroupDisabled(true)
+                  setResetDisabled(false)
+                  setPauseDisabled(false)
+                  start()
+                }}
+                disabled={startDisabled}
+              >
+                Start
+              </Button>
+            </div>
+            <div style={{ margin: 20 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                style={{ width: 100 }}
+                onClick={() => {
+                  anime.remove('.population')
+                  setStartDisabled(false)
+                  setShuffleDisabled(false)
+                  setGroupDisabled(false)
+                  setPauseDisabled(true)
+                }}
+                disabled={pauseDisabled}
+              >
+                Pause
+              </Button>
+            </div>
+            <div style={{ margin: 20 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                style={{ width: 100 }}
+                disabled={startDisabled}
+                onClick={() => {
+
+                }}
+              >
+                Reset
+              </Button>
+            </div>
+
           </div>
         </div>
       </div>
     </div>
-  );
+
+  )
 }
