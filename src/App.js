@@ -1,22 +1,31 @@
 import Typography from '@material-ui/core/Typography';
 import Slider from '@material-ui/core/Slider';
-import Button from '@material-ui/core/Button'
-import Input from '@material-ui/core/Input'
-import React, { useState, useEffect } from 'react'
+import Button from '@material-ui/core/Button';
+import Input from '@material-ui/core/Input';
+import React, { useState, useEffect } from 'react';
 import anime from 'animejs/lib/anime.es.js';
-import './App.css'
-import Ring from './circle.png'
+import './App.css';
+import Ring from './circle.png';
+import { Line } from 'react-chartjs-2';
+
+import { defaults } from 'react-chartjs-2';
+
+// Disable animating charts by default.
+defaults.plugins.tooltip.enabled = true
 
 export default function RangeSlider() {
-  const [population, setPopulation] = useState(50);
+  const [population, setPopulation] = useState(52);
   const [infectedPercent, setInfectedPercent] = useState(0)
-  const [contagiousRadius, setContagiousRadius] = useState(0)
+  const [contagiousRadius, setContagiousRadius] = useState(2)
   const [susceptibleRate, setSusceptibleRate] = useState(20)
   const [populationList, setPopulationList] = useState([])
   const [startDisabled, setStartDisabled] = useState(false)
   const [activeCases, setActiveCases] = useState(0)
   const [rFactor, setRFactor] = useState(0)
   const [status, setStatus] = useState([])
+  const [newStatus, setNewStatus] = useState([])
+  const [chartData, setChartData] = useState([])
+  const [chartLabel, setChartLabel] = useState([0])
 
   function renderHealthy(id) {
     return (
@@ -31,7 +40,7 @@ export default function RangeSlider() {
     return (
       <div class='population' id={id} style={{ margin: 10, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
         <img class='ring' src={Ring} style={{ width: 9.5, height: 9.5, position: 'absolute' }} />
-        <div class='infected' style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#FF0000' }} />
+        <div id={'infected'.concat(id)} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#FF0000' }} />
       </div>
     )
   }
@@ -39,16 +48,20 @@ export default function RangeSlider() {
   useEffect(() => {
     var pop = []
     var stats = []
+    var rec = []
     for (var i = 0; i < population; i++) {
       pop.push(i)
       if (i < Math.floor(population * infectedPercent / 100)) {
         stats.push(false)
+        rec.push(1)
       } else {
         stats.push(true)
+        rec.push(0)
       }
     }
     setStatus(stats)
     setPopulationList(pop)
+    setNewStatus(rec)
   }, [population, infectedPercent])
 
   useEffect(() => {
@@ -59,22 +72,38 @@ export default function RangeSlider() {
       }
     }
     setActiveCases(cases)
-  }, [status])
-
-  useEffect(() => {
-    var stop = status.every(e => e == false);
-    if (stop) {
+    if (cases === population) {
       anime.remove('.population')
       setStartDisabled(false)
     }
+  }, [status])
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      if (startDisabled && !stop) {
+      var curTime = chartLabel.slice(-1)[0]
+      if (startDisabled) {
+        setChartLabel([...chartLabel, curTime++])
+        setChartData([...chartData, activeCases])
         var stats = [...status]
         var coor = []
         for (var i = 0; i < population; i++) {
           var element = document.getElementById(i)
           var rect = element.getBoundingClientRect();
           coor.push([rect.top, rect.left])
+          if (newStatus[i] === 1) {
+            var index = i
+            setTimeout(() => {
+              var newStats = [...newStatus]
+              newStats[index] = 2
+              setNewStatus(newStats)
+              anime({
+                targets: document.getElementById('infected'.concat(index)),
+                background: '#808080',
+                duration: 1000,
+                easing: 'linear'
+              });
+            }, 1000);
+          }
         }
         if (coor.length > 0) {
           for (var i = 0; i < population; i++) {
@@ -82,26 +111,58 @@ export default function RangeSlider() {
               if (status[i] != status[j]) {
                 var dist = Math.sqrt(Math.pow(coor[i][0] - coor[j][0], 2) + Math.pow(coor[i][1] - coor[j][1], 2))
                 if (dist < 35) {
-                  if (!status[i]) {
-                    var el = document.getElementById('healthy'.concat(j))
-                    document.getElementById('ring'.concat(j)).classList.add('ring')
-                    anime({
-                      targets: el,
-                      background: '#FF0000',
-                      duration: 1000,
-                      easing: 'linear',
-                    });
-                    stats[j] = false
-                  } else {
-                    var el = document.getElementById('healthy'.concat(i))
-                    document.getElementById('ring'.concat(i)).classList.add('ring')
-                    anime({
-                      targets: el,
-                      background: '#FF0000',
-                      duration: 1000,
-                      easing: 'linear',
-                    })
-                    stats[i] = false
+                  var rand = Math.floor(Math.random() * 100)
+                  if (rand < susceptibleRate) {
+                    if (!status[i]) {
+                      var el = document.getElementById('healthy'.concat(j))
+                      document.getElementById('ring'.concat(j)).classList.add('ring')
+                      document.getElementById('ring'.concat(j)).classList.add(j)
+                      anime({
+                        targets: el,
+                        background: '#FF0000',
+                        duration: 1000,
+                        easing: 'linear',
+                      });
+
+                      setTimeout(() => {
+                        anime({
+                          targets: el,
+                          background: '#808080',
+                          duration: 1000,
+                          easing: 'linear'
+                        })
+                        anime({
+                          targets: document.getElementsByClassName(j.toString()),
+                          scale: 0.01
+                        })
+                        var stats2 = [...newStatus]
+                        stats2[j] = 2
+                        setNewStatus(stats2)
+                      }, 3000)
+                      stats[j] = false
+                    } else {
+                      var el = document.getElementById('healthy'.concat(i))
+                      document.getElementById('ring'.concat(i)).classList.add('ring')
+                      document.getElementById('ring'.concat(i)).classList.add(i)
+                      anime({
+                        targets: el,
+                        background: '#FF0000',
+                        duration: 1000,
+                        easing: 'linear',
+                      })
+                      stats[i] = false
+                      setTimeout(() => {
+                        anime({
+                          targets: el,
+                          background: '#808080',
+                          duration: 1000,
+                          easing: 'linear'
+                        })
+                        var stats2 = [...newStatus]
+                        stats2[i] = 2
+                        setNewStatus(stats2)
+                      }, 3000)
+                    }
                   }
                 }
               }
@@ -114,6 +175,16 @@ export default function RangeSlider() {
     return () => clearInterval(interval)
   }, [startDisabled, status])
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      var curTime = chartLabel.slice(-1)[0]
+      if (startDisabled) {
+
+      }
+    }, 500)
+    return () => clearInterval(interval)
+  }, [startDisabled])
+
   function handleBlur() {
     if (population < 0) {
       setPopulation(0);
@@ -121,6 +192,43 @@ export default function RangeSlider() {
       setPopulation(100);
     }
   }
+
+  const data = {
+    labels: chartLabel,
+    datasets: [
+      {
+        label: '# of infected cases',
+        data: chartData,
+        fill: {
+          target: 'origin',
+          above: 'rgb(255, 100, 132)',   // Area will be red above the origin
+        },
+        backgroundColor: '#FF0000',
+        borderColor: 'rgba(255, 99, 132, 0.2)',
+      },
+    ],
+  };
+
+  const options = {
+    tension: 0.3,
+    animation: false,
+    scales: {
+      xAxes: {
+        ticks: {
+          display: false
+        },
+      },
+      yAxes: {
+        ticks: {
+          beginAtZero: true,
+        },
+      },
+    }
+  };
+
+  const lineChart = (
+    <Line data={data} options={options} />
+  );
 
   function shuffle() {
     var currentIndex = population, temporaryValue, randomIndex;
@@ -157,7 +265,6 @@ export default function RangeSlider() {
         value: [1, 0],
         duration: 1000,
         easing: 'linear',
-        loop: true
       },
       loop: true
     })
@@ -165,12 +272,12 @@ export default function RangeSlider() {
 
   return (
     <div>
-      <div style={{ display: 'flex', flex: 1, flexDirection: 'row', padding: 40 }}>
-        <div style={{ display: 'flex', flex: 0.4, flexDirection: 'column', }}>
+      <div style={{ display: 'flex', flexDirection: 'row', padding: 40, justifyContent: 'flex-start', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', }}>
           <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
-            <text style={{ fontSize: 20 }}># Active cases: {activeCases}</text>
+            <text style={{ fontSize: 20 }}># Infected cases: {activeCases}</text>
           </div>
-          <div class='border' style={{ border: '3px solid black', width: 390, height: 390, flexWrap: 'wrap', flexDirection: 'row', display: 'flex', justifyContent: 'flex-start', alignItems: 'start', padding: 80 }}>
+          <div class='border' style={{ border: '3px solid black', width: 390, height: 390, flexWrap: 'wrap', flexDirection: 'row', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', padding: 80 }}>
             {populationList.map((id) => {
               if (id < Math.floor(population * infectedPercent / 100)) {
                 return (renderInfected(id))
@@ -179,14 +286,9 @@ export default function RangeSlider() {
               }
             })}
           </div>
-          <div>
-
-          </div>
-
           <text style={{ marginTop: 10, fontSize: 20 }}>R={rFactor}</text>
         </div>
-
-        <div style={{ display: 'flex', flex: 0.6, flexDirection: 'column', marginLeft: 50 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', margin: '10px 0 0 100px' }}>
           <Typography id="range-slider" gutterBottom>
             Population
           </Typography>
@@ -279,6 +381,10 @@ export default function RangeSlider() {
               />
             </div>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: 400, height: 75 }}>
+            <div style={{ height: 10, width: 10, borderRadius: 10, backgroundColor: 'red' }} />
+            <img src={Ring} style={{ height: contagiousRadius * 20, width: contagiousRadius * 20, position: 'absolute' }}></img>
+          </div>
           <Typography id="range-slider" gutterBottom>
             Susceptible Rate (%)
           </Typography>
@@ -322,8 +428,6 @@ export default function RangeSlider() {
                 Shuffle
               </Button>
             </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'row', }}>
             <div style={{ margin: 20 }}>
               <Button
                 variant="contained"
@@ -344,31 +448,24 @@ export default function RangeSlider() {
                 color="primary"
                 style={{ width: 100 }}
                 onClick={() => {
-                  anime.remove('.population')
-                  setStartDisabled(false)
-                }}
-                disabled={!startDisabled}
-              >
-                Pause
-              </Button>
-            </div>
-            <div style={{ margin: 20 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                style={{ width: 100 }}
-                disabled={!startDisabled}
-                onClick={() => {
+                  anime.remove('.population');
+                  setPopulation(0)
+                  setTimeout(() => {
+                    setPopulation(52)
+                  }, 100)
+                  setChartData([])
+                  setChartLabel([0])
                 }}
               >
                 Reset
               </Button>
             </div>
-
           </div>
         </div>
       </div>
+      <div style={{ padding: 40, width: 800 }}>
+        {lineChart}
+      </div>
     </div>
-
   )
 }
