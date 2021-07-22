@@ -12,6 +12,7 @@ import { defaults } from 'react-chartjs-2';
 
 // Disable animating charts by default.
 defaults.plugins.tooltip.enabled = true
+defaults.scale.beginAtZero = true
 
 export default function RangeSlider() {
   const [population, setPopulation] = useState(52);
@@ -21,11 +22,14 @@ export default function RangeSlider() {
   const [populationList, setPopulationList] = useState([])
   const [startDisabled, setStartDisabled] = useState(false)
   const [activeCases, setActiveCases] = useState(0)
-  const [rFactor, setRFactor] = useState(0)
+  const [recoveryTime, setRecoveryTime] = useState(3)
   const [status, setStatus] = useState([])
   const [newStatus, setNewStatus] = useState([])
   const [chartData, setChartData] = useState([])
   const [chartLabel, setChartLabel] = useState([0])
+  const [prevChartData, setPrevChartData] = useState([])
+  const [prevChartLabel, setPrevChartLabel] = useState([0])
+  const [prevPopulation, setPrevPopulation] = useState(0)
 
   function renderHealthy(id) {
     return (
@@ -72,17 +76,26 @@ export default function RangeSlider() {
       }
     }
     setActiveCases(cases)
-    if (cases === population) {
+    if (cases === population && cases > 0) {
       anime.remove('.population')
       setStartDisabled(false)
+      if (!prevChartData.length) {
+        var data = [...chartData]
+        var label = [...chartLabel]
+        var pop = population
+        setPrevChartData(data)
+        setPrevChartLabel(label)
+        setPrevPopulation(pop)
+      }
     }
   }, [status])
 
   useEffect(() => {
     const interval = setInterval(() => {
-      var curTime = chartLabel.slice(-1)[0]
       if (startDisabled) {
-        setChartLabel([...chartLabel, curTime++])
+        var curTime = chartLabel.slice(-1)[0]
+        curTime += 1
+        setChartLabel([...chartLabel, curTime])
         setChartData([...chartData, activeCases])
         var stats = [...status]
         var coor = []
@@ -123,7 +136,7 @@ export default function RangeSlider() {
                         duration: 1000,
                         easing: 'linear',
                       });
-
+                      stats[j] = false
                       setTimeout(() => {
                         anime({
                           targets: el,
@@ -135,11 +148,7 @@ export default function RangeSlider() {
                           targets: document.getElementsByClassName(j.toString()),
                           scale: 0.01
                         })
-                        var stats2 = [...newStatus]
-                        stats2[j] = 2
-                        setNewStatus(stats2)
                       }, 3000)
-                      stats[j] = false
                     } else {
                       var el = document.getElementById('healthy'.concat(i))
                       document.getElementById('ring'.concat(i)).classList.add('ring')
@@ -158,9 +167,6 @@ export default function RangeSlider() {
                           duration: 1000,
                           easing: 'linear'
                         })
-                        var stats2 = [...newStatus]
-                        stats2[i] = 2
-                        setNewStatus(stats2)
                       }, 3000)
                     }
                   }
@@ -175,16 +181,6 @@ export default function RangeSlider() {
     return () => clearInterval(interval)
   }, [startDisabled, status])
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      var curTime = chartLabel.slice(-1)[0]
-      if (startDisabled) {
-
-      }
-    }, 500)
-    return () => clearInterval(interval)
-  }, [startDisabled])
-
   function handleBlur() {
     if (population < 0) {
       setPopulation(0);
@@ -193,42 +189,66 @@ export default function RangeSlider() {
     }
   }
 
-  const data = {
-    labels: chartLabel,
-    datasets: [
-      {
-        label: '# of infected cases',
-        data: chartData,
-        fill: {
-          target: 'origin',
-          above: 'rgb(255, 100, 132)',   // Area will be red above the origin
-        },
-        backgroundColor: '#FF0000',
-        borderColor: 'rgba(255, 99, 132, 0.2)',
-      },
-    ],
-  };
+  function createChart(data, label, range) {
+    return (
+      <Line
+        data={{
+          labels: label,
+          datasets: [
+            {
+              label: '# of infected cases',
+              data: data,
+              fill: {
+                target: 'origin',
+                above: 'rgb(255, 100, 132)',   // Area will be red above the origin
+              },
+              borderColor: 'rgba(255, 99, 132, 0.2)',
+            },
+          ],
+        }}
+        options={{
+          animation: false,
+          scales: {
+            x: {
+              title: {
+                text: 'Unit of time',
+                display: true,
+                font: { size: 18 }
+              },
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              max: range + 10,
+              title: {
+                text: 'Infected cases',
+                display: true,
+                font: { size: 18 }
+              },
+            }
+          },
+          elements: {
+            point: {
+              radius: 0
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                font: {
+                  size: 18
+                }
+              }
+            }
+          }
+        }}
+      />
+    )
+  }
 
-  const options = {
-    tension: 0.3,
-    animation: false,
-    scales: {
-      xAxes: {
-        ticks: {
-          display: false
-        },
-      },
-      yAxes: {
-        ticks: {
-          beginAtZero: true,
-        },
-      },
-    }
-  };
-
-  const lineChart = (
-    <Line data={data} options={options} />
-  );
+  const curChart = createChart(chartData, chartLabel, population)
+  const prevChart = createChart(prevChartData, prevChartLabel, prevPopulation)
 
   function shuffle() {
     var currentIndex = population, temporaryValue, randomIndex;
@@ -286,7 +306,6 @@ export default function RangeSlider() {
               }
             })}
           </div>
-          <text style={{ marginTop: 10, fontSize: 20 }}>R={rFactor}</text>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', margin: '10px 0 0 100px' }}>
           <Typography id="range-slider" gutterBottom>
@@ -415,6 +434,37 @@ export default function RangeSlider() {
               />
             </div>
           </div>
+          <Typography id="range-slider" gutterBottom>
+            Recovery time (units)
+          </Typography>
+          <div style={{ display: 'flex', flexDirection: 'row', marginBottom: 40 }}>
+            <div style={{ width: 400 }}>
+              <Slider
+                value={recoveryTime}
+                onChange={(event, value) => setRecoveryTime(value)}
+                valueLabelDisplay="auto"
+                aria-labelledby="range-slider"
+                min={0}
+                max={10}
+                step={1}
+                disabled={startDisabled}
+              />
+            </div>
+            <div style={{ marginLeft: 10 }}>
+              <Input
+                value={recoveryTime}
+                margin="dense"
+                onChange={(event) => (event.target.value) ? setRecoveryTime(event.target.value) : () => { }}
+                inputProps={{
+                  step: 1,
+                  min: 0,
+                  max: 10,
+                  type: 'number',
+                  'aria-labelledby': 'input-slider',
+                }}
+              />
+            </div>
+          </div>
           Options:
           <div style={{ display: 'flex', flexDirection: 'row', }}>
             <div style={{ margin: 20 }}>
@@ -448,13 +498,23 @@ export default function RangeSlider() {
                 color="primary"
                 style={{ width: 100 }}
                 onClick={() => {
-                  anime.remove('.population');
+                  anime.remove('.population')
                   setPopulation(0)
                   setTimeout(() => {
                     setPopulation(52)
+                    setInfectedPercent(0)
                   }, 100)
                   setChartData([])
                   setChartLabel([0])
+                  setStartDisabled(false)
+                  if (prevChartData.length) {
+                    var data = [...chartData]
+                    var label = [...chartLabel]
+                    var pop = population
+                    setPrevChartData(data)
+                    setPrevChartLabel(label)
+                    setPrevPopulation(pop)
+                  }
                 }}
               >
                 Reset
@@ -463,8 +523,16 @@ export default function RangeSlider() {
           </div>
         </div>
       </div>
-      <div style={{ padding: 40, width: 800 }}>
-        {lineChart}
+      <div style={{ padding: 40, width: 1000 }}>
+        {curChart}
+        {(prevChartData.length) ? (
+          <div style={{ width: 1000, textAlign: 'center', fontSize: 20, fontWeight: 'bold' }}>
+            <div style={{ margin: 40 }}>Previous model</div>
+            {prevChart}
+          </div>
+        ) : (
+          <></>
+        )}
       </div>
     </div>
   )
