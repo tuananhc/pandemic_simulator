@@ -1,23 +1,23 @@
 {
   "files": {
     "main.css": "/pandemic_simulator/static/css/main.b67c6fd7.chunk.css",
-    "main.js": "/pandemic_simulator/static/js/main.ca81879d.chunk.js",
-    "main.js.map": "/pandemic_simulator/static/js/main.ca81879d.chunk.js.map",
+    "main.js": "/pandemic_simulator/static/js/main.a2ebe6c9.chunk.js",
+    "main.js.map": "/pandemic_simulator/static/js/main.a2ebe6c9.chunk.js.map",
     "runtime-main.js": "/pandemic_simulator/static/js/runtime-main.9697c820.js",
     "runtime-main.js.map": "/pandemic_simulator/static/js/runtime-main.9697c820.js.map",
-    "static/js/2.15e51345.chunk.js": "/pandemic_simulator/static/js/2.15e51345.chunk.js",
-    "static/js/2.15e51345.chunk.js.map": "/pandemic_simulator/static/js/2.15e51345.chunk.js.map",
+    "static/js/2.98cabb00.chunk.js": "/pandemic_simulator/static/js/2.98cabb00.chunk.js",
+    "static/js/2.98cabb00.chunk.js.map": "/pandemic_simulator/static/js/2.98cabb00.chunk.js.map",
     "static/js/3.4c90c685.chunk.js": "/pandemic_simulator/static/js/3.4c90c685.chunk.js",
     "static/js/3.4c90c685.chunk.js.map": "/pandemic_simulator/static/js/3.4c90c685.chunk.js.map",
     "index.html": "/pandemic_simulator/index.html",
     "static/css/main.b67c6fd7.chunk.css.map": "/pandemic_simulator/static/css/main.b67c6fd7.chunk.css.map",
-    "static/js/2.15e51345.chunk.js.LICENSE.txt": "/pandemic_simulator/static/js/2.15e51345.chunk.js.LICENSE.txt",
+    "static/js/2.98cabb00.chunk.js.LICENSE.txt": "/pandemic_simulator/static/js/2.98cabb00.chunk.js.LICENSE.txt",
     "static/media/circle.0772d047.png": "/pandemic_simulator/static/media/circle.0772d047.png"
   },
   "entrypoints": [
     "static/js/runtime-main.9697c820.js",
-    "static/js/2.15e51345.chunk.js",
+    "static/js/2.98cabb00.chunk.js",
     "static/css/main.b67c6fd7.chunk.css",
-    "static/js/main.ca81879d.chunk.js"
+    "static/js/main.a2ebe6c9.chunk.js"
   ]
 }
