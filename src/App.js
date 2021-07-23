@@ -119,7 +119,7 @@ export default function RangeSlider() {
                   var rand = Math.random()
                   console.log(rand)
                   if (rand > susceptibleRate / 100) {
-                    continue
+                    break
                   } else {
                     console.log(true)
                     if (!status[i]) {
