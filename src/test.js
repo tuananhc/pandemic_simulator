@@ -63,6 +63,7 @@ export default function App() {
   }, [infected])
 
   function clear(value) {
+    setHealthy(healthy => healthy.filter((item) => item !== value))
     setTimeout(() => {
       var target = document.getElementById('healthy'.concat(value))
       anime({
@@ -75,6 +76,7 @@ export default function App() {
       if (target !== null) {
         target.remove()
       }
+      setHealthy(healthy => healthy.filter((item) => item !== value))
       setRecovered(recovered => [...recovered, value])
     }, 1000 * recoveryTime)
   }
@@ -82,15 +84,28 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (startDisabled) {
+        // if (infected.length - recovered.length !== 0) {
+        //   setChartData(chartData => [...chartData, infected.length - recovered.length])
+        //   var curTime = chartLabel.slice(-1)[0]
+        //   curTime += 1
+        //   setChartLabel(chartLabel => [...chartLabel, curTime])
+        // }
+        var curTime = chartLabel.slice(-1)[0]
+        curTime += 1
+        setChartLabel([...chartLabel, curTime])
+        setChartData([...chartData, infected.length - recovered.length])
         for (var i = 0; i < healthy.length; i++) {
-          for (var j = 0; j < infected.length && !recovered.includes(j); j++) {
+          for (var j = 0; j < infected.length; j++) {
+            if (recovered.includes(infected[j])) {
+              continue
+            }
             var element1 = document.getElementById(healthy[i])
             var rect1 = element1.getBoundingClientRect();
             var element2 = document.getElementById(infected[j])
             var rect2 = element2.getBoundingClientRect();
             var dist = Math.sqrt(Math.pow(rect1.top - rect2.top, 2) + Math.pow(rect1.left - rect2.left, 2))
             if (dist < 25 * contagiousRadius) {
-              var rand = anime.random(0, 100)
+              var rand = Math.random() * 100
               if (rand < susceptibleRate) {
                 var el = document.getElementById('healthy'.concat(healthy[i]))
                 var ring = document.getElementById('ring'.concat(healthy[i]))
@@ -103,21 +118,18 @@ export default function App() {
                   duration: 1000,
                   easing: 'linear',
                 });
-                setInfected(infected => [...infected, healthy[i]])
+                if (!infected.includes(healthy[i])) {
+                  setInfected(infected => [...infected, healthy[i]])
+                }
+                break
               }
             }
           }
         }
-        if (chartData.slice(-1)[0] !== 0) {
-          setChartData(chartData => [...chartData, infected.length - recovered.length])
-          var curTime = chartLabel.slice(-1)[0]
-          curTime += 1
-          setChartLabel(chartLabel => [...chartLabel, curTime])
-        }
       }
     }, 1000)
     return () => clearInterval(interval)
-  }, [startDisabled, healthy, chartLabel])
+  }, [startDisabled, healthy, infected, recovered])
 
   function shuffle() {
     var currentIndex = population, temporaryValue, randomIndex;
@@ -301,7 +313,7 @@ export default function App() {
           {createSlider('Population', population, setPopulation, 169, 1)}
           {createSlider('Infected proportion (%)', infectedPercent, setInfectedPercent, 100, 0, 1)}
           {createSlider('Contagious Radius (meters)', contagiousRadius, setContagiousRadius, 2, 1, 0.05)}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: 350, height: 100, }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: 350, height: 80, }}>
             <div style={{ height: 7.5, width: 7.5, borderRadius: 7.5, backgroundColor: 'red' }} />
             <img src={Ring} style={{ height: contagiousRadius * 25 + 5, width: contagiousRadius * 25 + 5, position: 'absolute' }} />
           </div>

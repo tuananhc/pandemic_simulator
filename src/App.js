@@ -16,15 +16,16 @@ export default function App() {
   const [susceptibleRate, setSusceptibleRate] = useState(20)
   const [populationList, setPopulationList] = useState([])
   const [startDisabled, setStartDisabled] = useState(false)
-  const [activeCases, setActiveCases] = useState(0)
-  const [infectedCases, setInfectedCases] = useState(0)
   const [recoveryTime, setRecoveryTime] = useState(3)
-  const [status, setStatus] = useState([])
+  const [healthy, setHealthy] = useState([])
+  const [infected, setInfected] = useState([])
+  const [recovered, setRecovered] = useState([])
   const [chartData, setChartData] = useState([])
   const [chartLabel, setChartLabel] = useState([0])
   const [prevChartData, setPrevChartData] = useState([])
   const [prevChartLabel, setPrevChartLabel] = useState([0])
   const [chartProps, setChartProps] = useState({})
+  const [first, setFirst] = useState(true)
 
   function renderHealthy(id) {
     return (
@@ -38,119 +39,97 @@ export default function App() {
   function renderInfected(id) {
     return (
       <div class='population' id={id} style={{ margin: 5, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-        <img class='ring' src={Ring} style={{ width: 5, height: 5, position: 'absolute' }} />
-        <div id={'infected'.concat(id)} style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: '#FF0000' }} />
+        <img class='infect ring' src={Ring} style={{ width: 5, height: 5, position: 'absolute' }} />
+        <div id={'infected'.concat(id)} class='infected' style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: '#FF0000' }} />
       </div>
     )
   }
 
   useEffect(() => {
     var pop = []
-    var stats = []
     for (var i = 0; i < population; i++) {
       pop.push(i)
-      if (i < Math.floor(population * infectedPercent / 100)) {
-        stats.push(false)
-      } else {
-        stats.push(true)
-      }
     }
-    setStatus(stats)
     setPopulationList(pop)
+    setInfected(pop.slice(0, Math.floor(population * infectedPercent / 100)))
+    setHealthy(pop.slice(Math.floor(population * infectedPercent / 100)))
   }, [population, infectedPercent])
 
   useEffect(() => {
-    var cases = 0
-    for (var i = 0; i < population; i++) {
-      if (!status[i]) {
-        cases++
+    if (startDisabled) {
+      var value = infected.slice(-1)[0]
+      clear(value)
+    }
+  }, [infected])
+
+  function clear(value) {
+    setHealthy(healthy => healthy.filter((item) => item !== value))
+    setTimeout(() => {
+      var target = document.getElementById('healthy'.concat(value))
+      anime({
+        targets: target,
+        background: '#808080',
+        duration: 1000,
+        easing: 'linear'
+      })
+      target = document.getElementById('ring'.concat(value))
+      if (target !== null) {
+        target.remove()
       }
-    }
-    setActiveCases(cases)
-    if (cases === population && cases > 0) {
-      anime.remove('.population')
-      setStartDisabled(false)
-    }
-  }, [status])
+      setHealthy(healthy => healthy.filter((item) => item !== value))
+      setRecovered(recovered => [...recovered, value])
+    }, 1000 * recoveryTime)
+  }
 
   useEffect(() => {
     const interval = setInterval(() => {
       if (startDisabled) {
+        // if (infected.length - recovered.length !== 0) {
+        //   setChartData(chartData => [...chartData, infected.length - recovered.length])
+        //   var curTime = chartLabel.slice(-1)[0]
+        //   curTime += 1
+        //   setChartLabel(chartLabel => [...chartLabel, curTime])
+        // }
         var curTime = chartLabel.slice(-1)[0]
         curTime += 1
         setChartLabel([...chartLabel, curTime])
-        setChartData([...chartData, activeCases])
-        var stats = [...status]
-        var coor = []
-        for (var i = 0; i < population; i++) {
-          var element = document.getElementById(i)
-          var rect = element.getBoundingClientRect();
-          coor.push([rect.top, rect.left])
-        }
-        if (coor.length > 0) {
-          for (var i = 0; i < population; i++) {
-            for (var j = 0; j < population && j !== i; j++) {
-              if (status[i] !== status[j]) {
-                var dist = Math.sqrt(Math.pow(coor[i][0] - coor[j][0], 2) + Math.pow(coor[i][1] - coor[j][1], 2))
-                if (dist < 20 * contagiousRadius) {
-                  var rand = anime.random(0, 100)
-                  if (rand > susceptibleRate) {
-                    break
-                  } else {
-                    if (!status[i]) {
-                      var el = document.getElementById('healthy'.concat(j))
-                      document.getElementById('ring'.concat(j)).classList.add('ring')
-                      document.getElementById('ring'.concat(j)).classList.add(j)
-                      anime({
-                        targets: el,
-                        background: '#FF0000',
-                        duration: 1000,
-                        easing: 'linear',
-                      });
-                      stats[j] = false
-                      setTimeout(() => {
-                        anime({
-                          targets: el,
-                          background: '#808080',
-                          duration: 1000,
-                          easing: 'linear'
-                        })
-                        anime({
-                          targets: document.getElementsByClassName(j.toString()),
-                          scale: 0.01
-                        })
-                      }, 1000 * recoveryTime)
-                    } else {
-                      var el = document.getElementById('healthy'.concat(i))
-                      document.getElementById('ring'.concat(i)).classList.add('ring')
-                      document.getElementById('ring'.concat(i)).classList.add(i)
-                      anime({
-                        targets: el,
-                        background: '#FF0000',
-                        duration: 1000,
-                        easing: 'linear',
-                      })
-                      stats[i] = false
-                      setTimeout(() => {
-                        anime({
-                          targets: el,
-                          background: '#808080',
-                          duration: 1000,
-                          easing: 'linear'
-                        })
-                      }, 1000 * recoveryTime)
-                    }
-                  }
+        setChartData([...chartData, infected.length - recovered.length])
+        for (var i = 0; i < healthy.length; i++) {
+          for (var j = 0; j < infected.length; j++) {
+            if (recovered.includes(infected[j])) {
+              continue
+            }
+            var element1 = document.getElementById(healthy[i])
+            var rect1 = element1.getBoundingClientRect();
+            var element2 = document.getElementById(infected[j])
+            var rect2 = element2.getBoundingClientRect();
+            var dist = Math.sqrt(Math.pow(rect1.top - rect2.top, 2) + Math.pow(rect1.left - rect2.left, 2))
+            if (dist < 25 * contagiousRadius) {
+              var rand = Math.random() * 100
+              if (rand < susceptibleRate) {
+                var el = document.getElementById('healthy'.concat(healthy[i]))
+                var ring = document.getElementById('ring'.concat(healthy[i]))
+                if (ring !== null) {
+                  ring.classList.add('ring')
                 }
+                anime({
+                  targets: el,
+                  background: '#FF0000',
+                  duration: 1000,
+                  easing: 'linear',
+                });
+                if (!infected.includes(healthy[i])) {
+                  setInfected(infected => [...infected, healthy[i]])
+                }
+                break
               }
             }
           }
-          setStatus(stats)
         }
       }
     }, 1000)
     return () => clearInterval(interval)
-  }, [startDisabled, status])
+  }, [startDisabled, healthy, infected, recovered])
 
   function shuffle() {
     var currentIndex = population, temporaryValue, randomIndex;
@@ -182,11 +161,11 @@ export default function App() {
       targets: '.ring',
       scale: {
         value: [1, 4 * Math.sqrt(contagiousRadius)],
-        duration: 5500
+        duration: 4000
       },
       opacity: {
         value: [1, 0],
-        duration: 1000,
+        duration: 750,
         easing: 'linear',
       },
       loop: true
@@ -251,7 +230,7 @@ export default function App() {
             }}
           />
         </div>
-        <div style={{ border: '3px solid black', display: 'flex', width: 200, height: 150, flexDirection: 'column', justifyContent: 'center', paddingLeft: 10, marginLeft: 20 }}>
+        <div style={{ border: '3px solid black', display: 'flex', width: 200, height: 150, flexDirection: 'column', justifyContent: 'center', paddingLeft: 10, margin: '0 0 40px 40px' }}>
           Population: {props.pop}
           <br />
           Infected proportion: {props.infected}%
@@ -279,7 +258,7 @@ export default function App() {
   function createSlider(name, parameter, paramfunc, maxVal, minVal, stepSize) {
     return (
       <div>
-        <Typography id="range-slider" gutterBottom style={{ fontSize: 14 }}>
+        <Typography id="range-slider" gutterBottom style={{ fontSize: 12 }}>
           {name}
         </Typography>
         <div style={{ display: 'flex', flexDirection: 'row' }}>
@@ -316,13 +295,13 @@ export default function App() {
 
   return (
     <>
-      <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'flex-start', padding: '35px 0 0 50px' }}>
+      <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'flex-start', padding: '15px 0 0 50px' }}>
         <div style={{ width: 336 }}>
           <div style={{ display: 'flex', marginBottom: 5 }}>
-            <div style={{ display: 'flex', flex: 0.5, fontSize: 14, justifyContent: 'flex-start' }}># Infected cases: {activeCases}</div>
-            <div style={{ display: 'flex', flex: 0.5, fontSize: 14, justifyContent: 'flex-end' }}># Active cases: {activeCases}</div>
+            <div style={{ display: 'flex', flex: 0.5, fontSize: 14, justifyContent: 'flex-start' }}># Infected cases: {infected.length}</div>
+            <div style={{ display: 'flex', flex: 0.5, fontSize: 14, justifyContent: 'flex-end' }}># Active cases: {infected.length - recovered.length}</div>
           </div>
-          <div class='border' style={{ border: '3px solid black', width: 200, height: 200, flexWrap: 'wrap', flexDirection: 'row', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', padding: 65, marginBottom: 40 }}>
+          <div style={{ border: '3px solid black', width: 200, height: 200, flexWrap: 'wrap', flexDirection: 'row', display: 'flex', justifyContent: 'flex-start', alignItems: 'center', padding: 65, marginBottom: 20 }}>
             {populationList.map((id) => {
               if (id < Math.floor(population * infectedPercent / 100)) {
                 return (renderInfected(id))
@@ -334,37 +313,23 @@ export default function App() {
           {createSlider('Population', population, setPopulation, 169, 1)}
           {createSlider('Infected proportion (%)', infectedPercent, setInfectedPercent, 100, 0, 1)}
           {createSlider('Contagious Radius (meters)', contagiousRadius, setContagiousRadius, 2, 1, 0.05)}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: 350, height: 100, }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: 350, height: 80, }}>
             <div style={{ height: 7.5, width: 7.5, borderRadius: 7.5, backgroundColor: 'red' }} />
             <img src={Ring} style={{ height: contagiousRadius * 25 + 5, width: contagiousRadius * 25 + 5, position: 'absolute' }} />
           </div>
           {createSlider('Susceptible Rate (%)', susceptibleRate, setSusceptibleRate, 100, 0, 1)}
           {createSlider('Recovery time (units of time)', recoveryTime, setRecoveryTime, 10, 1, 1)}
           <div style={{ marginTop: 10 }}>
-            <div style={{ margin: 10 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                style={{ width: 100 }}
-                onClick={() => shuffle()}
-                disabled={startDisabled}
-              >
-                Shuffle
-              </Button>
-            </div>
             <div style={{ display: 'flex', flexDirection: 'row' }}>
               <div style={{ margin: 10 }}>
                 <Button
                   variant="contained"
                   color="primary"
                   style={{ width: 100 }}
-                  onClick={() => {
-                    setStartDisabled(true)
-                    start()
-                  }}
+                  onClick={() => shuffle()}
                   disabled={startDisabled}
                 >
-                  Start
+                  Shuffle
                 </Button>
               </div>
               <div style={{ margin: 10 }}>
@@ -373,12 +338,32 @@ export default function App() {
                   color="primary"
                   style={{ width: 100 }}
                   onClick={() => {
-                    anime.remove('.population')
-                    setStartDisabled(false)
+                    if (!startDisabled) {
+                      start()
+                      if (first) {
+                        setTimeout(() => {
+                          anime({
+                            targets: '.infected',
+                            background: '#808080',
+                            duration: 1000,
+                            easing: 'linear'
+                          })
+                          document.querySelectorAll('.infect.ring').forEach((item) => {
+                            item.remove()
+                          })
+                          for (var i = 0; i < Math.floor(population * infectedPercent / 100); i++) {
+                            setRecovered(recovered => [...recovered, i])
+                          }
+                          setFirst(false)
+                        }, 1000 * recoveryTime)
+                      }
+                    } else {
+                      anime.remove('.population')
+                    }
+                    setStartDisabled(!startDisabled)
                   }}
-                  disabled={!startDisabled}
                 >
-                  Pause
+                  {(!startDisabled) ? 'Start' : 'Pause'}
                 </Button>
               </div>
               <div style={{ margin: 10 }}>
@@ -396,21 +381,25 @@ export default function App() {
                       setContagiousRadius(1)
                       setRecoveryTime(3)
                     }, 100)
-                    setChartData([])
-                    setChartLabel([0])
-                    setStartDisabled(false)
-                    var data = [...chartData]
-                    var label = [...chartLabel]
-                    var props = {
-                      'pop': population,
-                      'infected': infectedPercent,
-                      'radius': contagiousRadius,
-                      'rate': susceptibleRate,
-                      'time': recoveryTime
+                    if (chartData.length > 0) {
+                      setChartData([])
+                      setChartLabel([0])
+                      setStartDisabled(false)
+                      var data = [...chartData]
+                      var label = [...chartLabel]
+                      var props = {
+                        'pop': population,
+                        'infected': infectedPercent,
+                        'radius': contagiousRadius,
+                        'rate': susceptibleRate,
+                        'time': recoveryTime
+                      }
+                      setPrevChartData(data)
+                      setPrevChartLabel(label)
+                      setChartProps(props)
                     }
-                    setPrevChartData(data)
-                    setPrevChartLabel(label)
-                    setChartProps(props)
+                    setFirst(true)
+                    setRecovered([])
                   }}
                 >
                   Reset
