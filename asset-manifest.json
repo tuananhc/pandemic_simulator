@@ -1,8 +1,8 @@
 {
   "files": {
     "main.css": "/pandemic_simulator/static/css/main.ea1455b2.chunk.css",
-    "main.js": "/pandemic_simulator/static/js/main.a9b27a83.chunk.js",
-    "main.js.map": "/pandemic_simulator/static/js/main.a9b27a83.chunk.js.map",
+    "main.js": "/pandemic_simulator/static/js/main.2cbae65e.chunk.js",
+    "main.js.map": "/pandemic_simulator/static/js/main.2cbae65e.chunk.js.map",
     "runtime-main.js": "/pandemic_simulator/static/js/runtime-main.c7bb5db4.js",
     "runtime-main.js.map": "/pandemic_simulator/static/js/runtime-main.c7bb5db4.js.map",
     "static/js/2.6b3272b3.chunk.js": "/pandemic_simulator/static/js/2.6b3272b3.chunk.js",
@@ -18,6 +18,6 @@
     "static/js/runtime-main.c7bb5db4.js",
     "static/js/2.6b3272b3.chunk.js",
     "static/css/main.ea1455b2.chunk.css",
-    "static/js/main.a9b27a83.chunk.js"
+    "static/js/main.2cbae65e.chunk.js"
   ]
 }
