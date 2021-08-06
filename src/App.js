@@ -84,12 +84,6 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (startDisabled) {
-        // if (infected.length - recovered.length !== 0) {
-        //   setChartData(chartData => [...chartData, infected.length - recovered.length])
-        //   var curTime = chartLabel.slice(-1)[0]
-        //   curTime += 1
-        //   setChartLabel(chartLabel => [...chartLabel, curTime])
-        // }
         var curTime = chartLabel.slice(-1)[0]
         curTime += 1
         setChartLabel([...chartLabel, curTime])
@@ -127,7 +121,7 @@ export default function App() {
           }
         }
       }
-    }, 1000)
+    }, 500)
     return () => clearInterval(interval)
   }, [startDisabled, healthy, infected, recovered])
 
@@ -293,6 +287,32 @@ export default function App() {
     )
   }
 
+  function handleStart() {
+    if (!startDisabled) {
+      start()
+      if (first) {
+        setTimeout(() => {
+          anime({
+            targets: '.infected',
+            background: '#808080',
+            duration: 1000,
+            easing: 'linear'
+          })
+          document.querySelectorAll('.infect.ring').forEach((item) => {
+            item.remove()
+          })
+          for (var i = 0; i < Math.floor(population * infectedPercent / 100); i++) {
+            setRecovered(recovered => [...recovered, i])
+          }
+          setFirst(false)
+        }, 1000 * recoveryTime)
+      }
+    } else {
+      anime.remove('.population')
+    }
+    setStartDisabled(!startDisabled)
+  }
+
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'flex-start', padding: '15px 0 0 50px' }}>
@@ -337,31 +357,7 @@ export default function App() {
                   variant="contained"
                   color="primary"
                   style={{ width: 100 }}
-                  onClick={() => {
-                    if (!startDisabled) {
-                      start()
-                      if (first) {
-                        setTimeout(() => {
-                          anime({
-                            targets: '.infected',
-                            background: '#808080',
-                            duration: 1000,
-                            easing: 'linear'
-                          })
-                          document.querySelectorAll('.infect.ring').forEach((item) => {
-                            item.remove()
-                          })
-                          for (var i = 0; i < Math.floor(population * infectedPercent / 100); i++) {
-                            setRecovered(recovered => [...recovered, i])
-                          }
-                          setFirst(false)
-                        }, 1000 * recoveryTime)
-                      }
-                    } else {
-                      anime.remove('.population')
-                    }
-                    setStartDisabled(!startDisabled)
-                  }}
+                  onClick={() => handleStart()}
                 >
                   {(!startDisabled) ? 'Start' : 'Pause'}
                 </Button>
